@@ -1,2 +1,5 @@
 # TimeShifter
-All Started With Hook... And Finished with TimeShifter (No Infosec Here)
+I Wanted to bulid some keylogger, and end with Time Shifter to COVID-19 time...
+This Application only check if you are on idle time or not...
+at the start of the day job after the first login the app create log on the current running path
+and start loging each break time, and if you working remotly or localy
