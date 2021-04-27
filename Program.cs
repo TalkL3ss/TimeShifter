@@ -1,14 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-//using System.Threading.Tasks;
 using System.IO;
+using System.Linq;
 using System.Net.NetworkInformation;
-//using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Hook
 {
@@ -33,13 +28,12 @@ namespace Hook
 
         static bool UserWork = false; //flag for not to write each time and stuck in loop
 
-       static void Main(string[] args)
+        static void Main(string[] args)
         {
 
 
             int idleTimer = 60 * 1000; //How Much time to wait idle check
             string fileName; //FileName To Log 
-
             Console.WriteLine("Waiting for system idle...");
 
             DateTime StopTime = DateTime.Now;
@@ -48,12 +42,13 @@ namespace Hook
                 Thread.Sleep(1000);
                 DateTime time = DateTime.Now;
                 string TimeWrite = time.ToString("dd-MM-yyyy HH:mm:ss"); //Set Time format to write on the file
-                fileName = ".\\"+DateTime.Now.ToString("dd-MM-yyyy") + ".csv"; //FileName using dd-MM-YY.txt Exmp: 20-02-2021.csv
+                fileName = ".\\" + DateTime.Now.ToString("dd-MM-yyyy") + ".csv"; //FileName using dd-MM-YY.txt Exmp: 20-02-2021.csv
+  //              fileName = ".\\" + DateTime.Now.AddDays(-1).ToString("dd-MM-yyyy");
+                bool logfileExist = File.Exists(fileName);
                 string myUserNamme, myAction, TimeToWrite, strRes;
                 double BraekingTimeToLog;
                 bool blnRemote;
-                if (!File.Exists(fileName)) { using (StreamWriter sw = File.CreateText(fileName)) { sw.WriteLine("UserName,Action,Time,BreakTime,Remotly,BreakTimeReason"); sw.Close(); } } //check if file exists if not create it
-                else
+
                 {
                     myUserNamme = Environment.GetEnvironmentVariable("Username");
 
@@ -63,7 +58,7 @@ namespace Hook
                         Console.WriteLine("{0} Not Working On Comp {1} Remotly: {2}", Environment.GetEnvironmentVariable("Username"), time, isRemote());
                         myAction = "Stop";
                         TimeToWrite = TimeWrite;
-                        BraekingTimeToLog =  0;
+                        BraekingTimeToLog = 0;
                         blnRemote = isRemote();
                         strRes = "-";
                         AppendToMyFile(fileName, myUserNamme, myAction, TimeToWrite, BraekingTimeToLog, blnRemote, strRes);
@@ -75,15 +70,20 @@ namespace Hook
                         strRes = "OutOfOffice";
                         double breakingTime = (time - StopTime).TotalMinutes;
                         breakingTime = Math.Floor(breakingTime);
-                        var lines = File.ReadAllLines(fileName);
-                        if (((breakingTime >= 0) && (breakingTime <= 5)) && lines.Length >= 3)
+
+                        if (breakingTime >= 0 && breakingTime <= 5)
                         {
-                            File.WriteAllLines(fileName, lines.Take(lines.Length - 1).ToArray());
-
-                            Console.WriteLine("delete last line of the file");
-
+                            if (logfileExist)
+                            {
+                                var lines = File.ReadAllLines(fileName);
+                                if (lines.Length >= 2)
+                                {
+                                    File.WriteAllLines(fileName, lines.Take(lines.Length - 1).ToArray());
+                                    Console.WriteLine("delete last line of the file");
+                                }
+                            }
                         }
-                        else if (lines.Length == 1)
+                        else if (!logfileExist)
                         {
                             myAction = "Start-Day";
                             TimeToWrite = TimeWrite;
@@ -91,13 +91,15 @@ namespace Hook
                             blnRemote = isRemote();
                             strRes = "-";
                             AppendToMyFile(fileName, myUserNamme, myAction, TimeToWrite, BraekingTimeToLog, blnRemote, strRes);
+                            Console.Clear();
+                            Console.WriteLine("Starting New Day...");
                         }
                         else
                         {
                             try
                             {
 
-                                Console.WriteLine("Please Supply Where Have You Been, if no reason supply witthin 20 sec's the default is OutOfOffice?");
+                                Console.WriteLine("Please Supply Where Have You Been, if no reason supply witthin 30 sec's the default is OutOfOffice?");
                                 Console.WriteLine("Can Be 1/2/3./Any Other freestyle reason");
                                 Console.WriteLine("Example: 3) Read mails offline");
                                 Console.WriteLine("Example: 3. Read mails offline");
@@ -114,7 +116,7 @@ namespace Hook
                                         strRes = "PhoneCall";
                                         break;
                                     case "3.":
-                                        strRes = strRes.Replace("3.", "");
+                                        strRes = strRes.Replace("3.", "").Replace("3)", "");
                                         break;
                                     default:
                                         break;
@@ -131,20 +133,21 @@ namespace Hook
                             blnRemote = isRemote();
                             AppendToMyFile(fileName, myUserNamme, myAction, TimeToWrite, BraekingTimeToLog, blnRemote, strRes);
                         }
-                         Console.WriteLine("{0} Start Working {1}, Breaking Time {2} Minutes Remotly: {3}, BreakingReasone: {4}", Environment.GetEnvironmentVariable("Username"), time, breakingTime, isRemote(), strRes);
-                        
+                        Console.WriteLine("{0} Start Working {1}, Breaking Time {2} Minutes Remotly: {3}, BreakingReasone: {4}", Environment.GetEnvironmentVariable("Username"), time, breakingTime, isRemote(), strRes);
+
                         UserWork = false;
 
                     }
 
                 }
 
-              }
-
             }
-        static void AppendToMyFile(string myFileName, string myUserNamme,string myAction,string TimeToWrite, double BreakTime,bool blnRemote,string strReasone)
+
+        }
+        static void AppendToMyFile(string myFileName, string myUserNamme, string myAction, string TimeToWrite, double BreakTime, bool blnRemote, string strReasone)
         {
-            File.AppendAllText(myFileName, myUserNamme + ","+ myAction+"," + TimeToWrite + "," + BreakTime + "," + blnRemote + "," + strReasone + "\r\n");
+            if (!File.Exists(myFileName)) { using (StreamWriter sw = File.CreateText(myFileName)) { sw.WriteLine("UserName,Action,Time,BreakTime,Remotly,BreakTimeReason"); sw.Close(); }; } //check if file exists if not create it
+            File.AppendAllText(myFileName, myUserNamme + "," + myAction + "," + TimeToWrite + "," + BreakTime + "," + blnRemote + "," + strReasone + "\r\n");
         }
         static bool isRemote()
         {
@@ -161,6 +164,13 @@ namespace Hook
                 }
             }
             return isRemote;
+        }
+
+        static bool IsItSundayYet()
+        {
+            DateTime DayOfTheWeek = DateTime.Now;
+            if ((DayOfTheWeek.DayOfWeek == DayOfWeek.Friday) || (DayOfTheWeek.DayOfWeek == DayOfWeek.Saturday)) { return false; }
+            return true;
         }
 
         class Reader
@@ -194,11 +204,15 @@ namespace Hook
                 getInput.Set();
                 bool success = gotInput.WaitOne(timeOutMillisecs);
                 if (success)
+                {
                     return input;
+                }
                 else
+                {
                     throw new TimeoutException("User did not provide input within the timelimit.");
+                }
             }
         }
 
     }
-    }
+}
